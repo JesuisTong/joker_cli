@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
+mod args;
 mod utils;
 
 #[derive(Parser, Debug)]
@@ -37,21 +38,16 @@ struct Args {
     command: Commands,
 }
 
-#[derive(Parser, Debug)]
-struct MineArgs {
-    #[arg(
-        long,
-        value_name = "cores",
-        help = "Cpu core you use",
-        default_value = "2"
-    )]
-    cores: u8,
-}
-
 #[derive(Subcommand, Debug)]
 enum Commands {
     #[command(about = "Start mining")]
-    Mine(MineArgs),
+    Mine(args::MineArgs),
+
+    #[command(about = "Account info")]
+    Info,
+
+    #[command(about = "Mine records")]
+    Records,
 }
 
 struct Joker {
@@ -237,8 +233,14 @@ impl Joker {
                     .to_string(),
                 )
                 .send()
-                .await?;
+                .await;
 
+            if response.is_err() {
+                utils::format_error(&self.name, &format!("claim failed {:?}", response.err()));
+                continue;
+            }
+
+            let response = response.unwrap();
             let status = response.status();
             if status == StatusCode::OK {
                 let set_headers: Vec<String> = response
@@ -262,6 +264,34 @@ impl Joker {
             }
         }
     }
+
+    async fn get_records(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let (client, headers) = self.request();
+        let response = client
+            .get("https://test2.blockjoker.org/api/v2/missions/records")
+            .headers(headers)
+            .send()
+            .await?;
+
+        println!("status: {:?}", response.status());
+        println!("text: {:#?}", response.text().await?);
+
+        Ok(())
+    }
+
+    async fn get_account_info(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let (client, headers) = self.request();
+        let response = client
+            .get("https://test2.blockjoker.org/api/v2/accounts")
+            .headers(headers)
+            .send()
+            .await?;
+
+        println!("status: {:?}", response.status());
+        println!("text: {:#?}", response.text().await?);
+
+        Ok(())
+    }
 }
 
 #[tokio::main]
@@ -269,19 +299,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     colog::init();
     let args: Args = Args::parse();
 
-    let cores = match args.command {
-        Commands::Mine(mine_args) => mine_args.cores,
-    };
-
     let mut joker = Joker::new(
         "Joker".to_string(),
         args.cookie.unwrap(),
         args.session_cookie.unwrap(),
         args.authorization.unwrap(),
-        cores,
+        2,
     );
 
-    joker.do_loop().await?;
+    match args.command {
+        Commands::Mine(mine_args) => {
+            joker.core = mine_args.cores;
+            joker.do_loop().await?
+        }
+        Commands::Info => joker.get_account_info().await?,
+        Commands::Records => joker.get_records().await?,
+    };
 
     Ok(())
 }
