@@ -100,8 +100,14 @@ impl Joker {
                 .post("https://test2.blockjoker.org/api/v1/missions")
                 .headers(headers.clone())
                 .send()
-                .await?;
+                .await;
 
+            if response.is_err() {
+                utils::format_error(&self.name, &format!("get mission failed {:?}", response.err()));
+                continue;
+            }
+            
+            let response = response.unwrap();
             let status = response.status();
             if status == StatusCode::OK {
                 let set_headers: Vec<String> = response
