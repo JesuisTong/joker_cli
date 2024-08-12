@@ -2,9 +2,7 @@ use clap::{Parser, Subcommand};
 use colog;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, COOKIE, SET_COOKIE};
 use reqwest::StatusCode;
-use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::fmt::{Display, Formatter};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
@@ -56,29 +54,6 @@ enum Commands {
     Mine(MineArgs),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct TapData {
-    number_gem: f32,
-    number_ec: i32,
-    level: i32,
-    base_rate: f32,
-    min_ec: i32,
-    number_tap: i64,
-}
-
-#[derive(Debug)]
-enum JokerErr {
-    GetMissionErr,
-}
-
-impl Display for JokerErr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl std::error::Error for JokerErr {}
-
 struct Joker {
     name: String,
     cookie: String,
@@ -124,35 +99,36 @@ impl Joker {
     async fn get_mission(&mut self) -> Result<String, Box<dyn std::error::Error>> {
         let (client, headers) = self.request();
 
-        let response = client
-            .post("https://test2.blockjoker.org/api/v1/missions")
-            .headers(headers)
-            .send()
-            .await?;
+        loop {
+            let response = client
+                .post("https://test2.blockjoker.org/api/v1/missions")
+                .headers(headers.clone())
+                .send()
+                .await?;
 
-        if response.status() == StatusCode::OK {
-            let set_headers: Vec<String> = response
-                .headers()
-                .get_all(SET_COOKIE)
-                .iter()
-                .map(|v| {
-                    let ck = cookie::Cookie::parse(v.to_str().unwrap()).unwrap();
-                    let (name, value) = ck.name_value();
-                    let name_value = name.to_owned() + "=" + value;
-                    name_value
-                })
-                .collect();
-            self.session_cookie = set_headers.join("; ");
+            let status = response.status();
+            if status == StatusCode::OK {
+                let set_headers: Vec<String> = response
+                    .headers()
+                    .get_all(SET_COOKIE)
+                    .iter()
+                    .map(|v| {
+                        let ck = cookie::Cookie::parse(v.to_str().unwrap()).unwrap();
+                        let (name, value) = ck.name_value();
+                        let name_value = name.to_owned() + "=" + value;
+                        name_value
+                    })
+                    .collect();
+                self.session_cookie = set_headers.join("; ");
 
-            let bui: &serde_json::Value = &response.json().await?;
+                let bui: &serde_json::Value = &response.json().await?;
 
-            if bui["result"].is_string() {
-                return Ok(bui["result"].as_str().unwrap().to_string());
+                if bui["result"].is_string() {
+                    return Ok(bui["result"].as_str().unwrap().to_string());
+                }
             }
+            utils::format_error(&self.name, &format!("get_mission failed, {:?}", status));
         }
-
-        utils::format_error(&self.name, "get_mission failed");
-        Err(Box::new(JokerErr::GetMissionErr))
     }
 
     async fn do_loop(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -163,8 +139,8 @@ impl Joker {
             utils::format_println(&self.name, &format!("get mission: {}", mission_hash));
             let timer = Instant::now();
             let nonce = self.find_hash_par(&mission_hash, self.core).await;
-            self.claim(nonce).await?;
             total_time += timer.elapsed().as_secs_f64();
+            self.claim(nonce).await?;
             claim_cnt += 1;
             utils::format_println(
                 &self.name,
@@ -244,55 +220,47 @@ impl Joker {
             .next()
             .unwrap();
 
-        // Join handles and return best nonce
         handles.unwrap()
-        // let mut best_nonce = String::from("");
-        // for h in handles {
-        //     if let Ok(nonce) = h {
-        //         best_nonce = nonce;
-        //         break;
-        //     }
-        // }
-
-        // best_nonce
     }
 
     async fn claim(&mut self, nonce: String) -> Result<(), Box<dyn std::error::Error>> {
         let (client, headers) = self.request();
-        let response = client
-            .post("https://test2.blockjoker.org/api/v1/missions/nonce")
-            .headers(headers)
-            .body(
-                json!({
-                    "nonce": nonce
-                })
-                .to_string(),
-            )
-            .send()
-            .await?;
 
-        let status = response.status();
-        if status == StatusCode::OK {
-            let set_headers: Vec<String> = response
-                .headers()
-                .get_all(SET_COOKIE)
-                .iter()
-                .map(|v| {
-                    let ck = cookie::Cookie::parse(v.to_str().unwrap()).unwrap();
-                    let (name, value) = ck.name_value();
-                    let name_value = name.to_owned() + "=" + value;
-                    name_value
-                })
-                .collect();
-            self.session_cookie = set_headers.join("; ");
-        } else {
-            utils::format_error(
-                &self.name,
-                &format!("claim failed {}, {}", status, response.text().await?),
-            );
+        loop {
+            let response = client
+                .post("https://test2.blockjoker.org/api/v1/missions/nonce")
+                .headers(headers.clone())
+                .body(
+                    json!({
+                        "nonce": nonce
+                    })
+                    .to_string(),
+                )
+                .send()
+                .await?;
+
+            let status = response.status();
+            if status == StatusCode::OK {
+                let set_headers: Vec<String> = response
+                    .headers()
+                    .get_all(SET_COOKIE)
+                    .iter()
+                    .map(|v| {
+                        let ck = cookie::Cookie::parse(v.to_str().unwrap()).unwrap();
+                        let (name, value) = ck.name_value();
+                        let name_value = name.to_owned() + "=" + value;
+                        name_value
+                    })
+                    .collect();
+                self.session_cookie = set_headers.join("; ");
+                return Ok(());
+            } else {
+                utils::format_error(
+                    &self.name,
+                    &format!("claim failed {}, {}", status, response.text().await?),
+                );
+            }
         }
-
-        Ok(())
     }
 }
 
