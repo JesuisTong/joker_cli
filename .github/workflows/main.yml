@@ -45,7 +45,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: `${{steps.read_name.outputs.value}}_v${{steps.read_version.outputs.value}}`,
-              name: `Joker Bot v${{steps.read_version.outputs.value}}`,
+              name: `Joker Cli v${{steps.read_version.outputs.value}}`,
               body: `${{ github.event.head_commit.message }}`,
               draft: true,
               prerelease: false
@@ -138,11 +138,6 @@ jobs:
               name: '${{ matrix.archive-name }}',
               data: await fs.readFileSync('./archive/${{ matrix.archive-name }}'),
             })
-      # - name: Upload archive
-      #   uses: actions/upload-artifact@v1
-      #   with:
-      #     name: ${{ matrix.archive-name }}
-      #     path: archive/${{ matrix.archive-name }}
 
   publish-release:
     permissions:

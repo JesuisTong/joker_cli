@@ -1,5 +1,5 @@
 [package]
-name = "joker_bot"
+name = "joker_cli"
 version = "0.0.1"
 edition = "2021"
 
