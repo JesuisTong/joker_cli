@@ -4,15 +4,14 @@
 
 As [Block Joker](https://test2.blockjoker.org/home) said, no real use bot maybe.
 
-> Just for Joker testnet2.
-
 ## Caution
 
 This is for learning and praticing, use it may cause you be banned.
 
 ## Features
 
-- [✔] Multi cores calculate enable.
+- [✔] Support both v1 and v2.
+- [✔] Multi cores calculate hash enable.
 
 ## Usage
 
