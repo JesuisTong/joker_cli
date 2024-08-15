@@ -64,17 +64,17 @@ jobs:
             os: ubuntu-22.04
             rust: nightly
             target: x86_64-unknown-linux-gnu
-            archive-name: tg-banana-bot-linux.tar.gz
+            archive-name: joker-cli-linux.tar.gz
           - build: macos
             os: macos-latest
             rust: nightly
             target: x86_64-apple-darwin
-            archive-name: tg-banana-bot-macos.tar.gz
+            archive-name: joker-cli-macos.tar.gz
           - build: windows
             os: windows-latest
             rust: nightly-x86_64-msvc
             target: x86_64-pc-windows-msvc
-            archive-name: tg-banana-bot-windows.7z
+            archive-name: joker-cli-windows.7z
       fail-fast: false
     runs-on: ${{ matrix.os }}
 
