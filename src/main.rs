@@ -1,13 +1,8 @@
 use clap::{Parser, Subcommand};
 use colog;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, COOKIE, SET_COOKIE};
-use reqwest::StatusCode;
-use serde_json::json;
-use std::sync::{Arc, RwLock};
-use std::time::{Duration, Instant};
-use tokio::time::sleep;
 
 mod args;
+mod joker;
 mod utils;
 
 #[derive(Parser, Debug)]
@@ -16,7 +11,7 @@ struct Args {
     #[arg(
         long,
         short = 'c',
-        value_name = "cookie",
+        value_name = "COOKIE",
         help = "your website cookie",
         global = true
     )]
@@ -34,6 +29,12 @@ struct Args {
     #[arg(long, short = 'A', help = "authorization.", global = true)]
     authorization: Option<String>,
 
+    #[arg(long, short = 'P', help = "proxy", global = true)]
+    proxy: Option<String>,
+
+    #[arg(long, help = "joker version", global = true, default_value = "2")]
+    version: u8,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -50,253 +51,24 @@ enum Commands {
     Records,
 }
 
-struct Joker {
-    name: String,
-    cookie: String,
-    session_cookie: String,
-    authorization: String,
-    core: u8,
-}
-
-impl Joker {
-    fn new(
-        name: String,
-        cookie: String,
-        session_cookie: String,
-        authorization: String,
-        core: u8,
-    ) -> Self {
-        Self {
-            name,
-            cookie,
-            session_cookie,
-            authorization,
-            core,
-        }
-    }
-
-    fn request(&self) -> (reqwest::Client, HeaderMap) {
-        let client = reqwest::Client::new();
-        let mut headers = HeaderMap::new();
-        utils::init_headers(&mut headers);
-
-        headers.insert(
-            COOKIE,
-            HeaderValue::from_str(&format!("{} {}", &self.cookie, &self.session_cookie)).unwrap(),
-        );
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", &self.authorization)).unwrap(),
-        );
-
-        (client, headers)
-    }
-
-    async fn get_mission(&mut self) -> Result<String, Box<dyn std::error::Error>> {
-        let (client, headers) = self.request();
-
-        loop {
-            let response = client
-                .post("https://test2.blockjoker.org/api/v1/missions")
-                .headers(headers.clone())
-                .send()
-                .await;
-
-            if response.is_err() {
-                utils::format_error(&self.name, &format!("get mission failed {:?}", response.err()));
-                continue;
-            }
-            
-            let response = response.unwrap();
-            let status = response.status();
-            if status == StatusCode::OK {
-                let set_headers: Vec<String> = response
-                    .headers()
-                    .get_all(SET_COOKIE)
-                    .iter()
-                    .map(|v| {
-                        let ck = cookie::Cookie::parse(v.to_str().unwrap()).unwrap();
-                        let (name, value) = ck.name_value();
-                        let name_value = name.to_owned() + "=" + value;
-                        name_value
-                    })
-                    .collect();
-                self.session_cookie = set_headers.join("; ");
-
-                let bui: &serde_json::Value = &response.json().await?;
-
-                if bui["result"].is_string() {
-                    return Ok(bui["result"].as_str().unwrap().to_string());
-                }
-            }
-            utils::format_error(&self.name, &format!("get_mission failed, {:?}", status));
-        }
-    }
-
-    async fn do_loop(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut claim_cnt = 0;
-        let mut total_time = 0f64;
-        loop {
-            let mission_hash = self.get_mission().await?;
-            utils::format_println(&self.name, &format!("get mission: {}", mission_hash));
-            let timer = Instant::now();
-            let nonce = self.find_hash_par(&mission_hash, self.core).await;
-            total_time += timer.elapsed().as_secs_f64();
-            self.claim(nonce).await?;
-            claim_cnt += 1;
-            utils::format_println(
-                &self.name,
-                &format!(
-                    "cal avg time: ({} secs)\nclaim count: {}",
-                    total_time / claim_cnt as f64,
-                    claim_cnt
-                ),
-            );
-            sleep(Duration::from_millis(100)).await;
-        }
-    }
-
-    async fn find_hash_par(&self, mission_hash: &str, cores: u8) -> String {
-        let core_ids = core_affinity::get_core_ids().unwrap();
-        let global_match_nonce = Arc::new(RwLock::new("".to_string()));
-
-        let handles = core_ids
-            .into_iter()
-            .map(|i| {
-                let global_match_nonce = Arc::clone(&global_match_nonce);
-
-                std::thread::spawn({
-                    let mission_hash = mission_hash.to_owned().clone();
-                    move || {
-                        // Return if core should not be used
-                        if (i.id as u8).ge(&cores) {
-                            return String::from("");
-                        }
-
-                        // Pin to core
-                        let _ = core_affinity::set_for_current(i);
-
-                        // Start hashing
-                        #[cfg(debug_assertions)]
-                        let timer = Instant::now();
-
-                        loop {
-                            // Create hash
-                            let nonce = utils::generate_nonce(48);
-                            let str = format!("{}{}", mission_hash, nonce);
-                            let best_match = utils::generate_hash(&str);
-
-                            // Check if hash is valid
-                            if best_match.starts_with("00000") {
-                                #[cfg(debug_assertions)]
-                                println!(
-                                    "Hash found: {} ({}s)\nNonce: {}",
-                                    best_match,
-                                    timer.elapsed().as_secs_f64(),
-                                    nonce
-                                );
-
-                                let copy_best_match_nonce = nonce.clone();
-                                *global_match_nonce.write().unwrap() = copy_best_match_nonce;
-                                return nonce;
-                            }
-
-                            let global_match_hash = global_match_nonce.read().unwrap().clone();
-                            if global_match_hash != "" {
-                                break;
-                            }
-                        }
-
-                        String::from("")
-                    }
-                })
-            })
-            .map(|x| x.join())
-            .filter(|x| {
-                if let Ok(nonce) = x {
-                    return nonce != "";
-                }
-                false
-            })
-            .take(1)
-            .next()
-            .unwrap();
-
-        handles.unwrap()
-    }
-
-    async fn claim(&mut self, nonce: String) -> Result<(), Box<dyn std::error::Error>> {
-        let (client, headers) = self.request();
-
-        loop {
-            let response = client
-                .post("https://test2.blockjoker.org/api/v1/missions/nonce")
-                .headers(headers.clone())
-                .body(
-                    json!({
-                        "nonce": nonce
-                    })
-                    .to_string(),
-                )
-                .send()
-                .await;
-
-            if response.is_err() {
-                utils::format_error(&self.name, &format!("claim failed {:?}", response.err()));
-                continue;
-            }
-
-            let response = response.unwrap();
-            let status = response.status();
-            if status == StatusCode::OK {
-                let set_headers: Vec<String> = response
-                    .headers()
-                    .get_all(SET_COOKIE)
-                    .iter()
-                    .map(|v| {
-                        let ck = cookie::Cookie::parse(v.to_str().unwrap()).unwrap();
-                        let (name, value) = ck.name_value();
-                        let name_value = name.to_owned() + "=" + value;
-                        name_value
-                    })
-                    .collect();
-                self.session_cookie = set_headers.join("; ");
-                return Ok(());
-            } else {
-                utils::format_error(
-                    &self.name,
-                    &format!("claim failed {}, {}", status, response.text().await?),
-                );
-            }
-        }
-    }
-
-    async fn get_records(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let (client, headers) = self.request();
-        let response = client
-            .get("https://test2.blockjoker.org/api/v2/missions/records")
-            .headers(headers)
-            .send()
-            .await?;
-
-        println!("status: {:?}", response.status());
-        println!("text: {:#?}", response.text().await?);
-
-        Ok(())
-    }
-
-    async fn get_account_info(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let (client, headers) = self.request();
-        let response = client
-            .get("https://test2.blockjoker.org/api/v2/accounts")
-            .headers(headers)
-            .send()
-            .await?;
-
-        println!("status: {:?}", response.status());
-        println!("text: {:#?}", response.text().await?);
-
-        Ok(())
+fn create_joker_instance(args: &Args) -> joker::JokerEnum {
+    match args.version {
+        2u8 => joker::JokerEnum::Joker2(joker::Joker2::new(
+            "Joker".to_string(),
+            args.cookie.clone().unwrap(),
+            args.session_cookie.clone().unwrap(),
+            args.authorization.clone().unwrap(),
+            args.proxy.clone(),
+            2,
+        )),
+        _ => joker::JokerEnum::Joker1(joker::Joker1::new(
+            "Joker".to_string(),
+            args.cookie.clone().unwrap(),
+            args.session_cookie.clone().unwrap(),
+            args.authorization.clone().unwrap(),
+            args.proxy.clone(),
+            2,
+        )),
     }
 }
 
@@ -305,21 +77,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     colog::init();
     let args: Args = Args::parse();
 
-    let mut joker = Joker::new(
-        "Joker".to_string(),
-        args.cookie.unwrap(),
-        args.session_cookie.unwrap(),
-        args.authorization.unwrap(),
-        2,
-    );
+    let mut joker_ins = create_joker_instance(&args);
 
     match args.command {
         Commands::Mine(mine_args) => {
-            joker.core = mine_args.cores;
-            joker.do_loop().await?
+            joker_ins.set_cores(mine_args.cores);
+            joker_ins.do_loop().await?;
         }
-        Commands::Info => joker.get_account_info().await?,
-        Commands::Records => joker.get_records().await?,
+        Commands::Info => {
+            joker_ins.get_account_info().await?;
+        }
+        Commands::Records => {
+            joker_ins.get_records().await?;
+        }
     };
 
     Ok(())

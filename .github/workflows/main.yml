@@ -45,7 +45,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: `${{steps.read_name.outputs.value}}_v${{steps.read_version.outputs.value}}`,
-              name: `Joker Bot v${{steps.read_version.outputs.value}}`,
+              name: `Joker Cli v${{steps.read_version.outputs.value}}`,
               body: `${{ github.event.head_commit.message }}`,
               draft: true,
               prerelease: false
@@ -64,17 +64,17 @@ jobs:
             os: ubuntu-22.04
             rust: nightly
             target: x86_64-unknown-linux-gnu
-            archive-name: tg-banana-bot-linux.tar.gz
+            archive-name: joker-cli-linux.tar.gz
           - build: macos
             os: macos-latest
             rust: nightly
             target: x86_64-apple-darwin
-            archive-name: tg-banana-bot-macos.tar.gz
+            archive-name: joker-cli-macos.tar.gz
           - build: windows
             os: windows-latest
             rust: nightly-x86_64-msvc
             target: x86_64-pc-windows-msvc
-            archive-name: tg-banana-bot-windows.7z
+            archive-name: joker-cli-windows.7z
       fail-fast: false
     runs-on: ${{ matrix.os }}
 
@@ -138,11 +138,6 @@ jobs:
               name: '${{ matrix.archive-name }}',
               data: await fs.readFileSync('./archive/${{ matrix.archive-name }}'),
             })
-      # - name: Upload archive
-      #   uses: actions/upload-artifact@v1
-      #   with:
-      #     name: ${{ matrix.archive-name }}
-      #     path: archive/${{ matrix.archive-name }}
 
   publish-release:
     permissions:
