@@ -4,8 +4,7 @@ use rand::{thread_rng, Rng};
 use sha2::{Digest, Sha256};
 
 use reqwest::header::{
-    HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, CACHE_CONTROL, CONTENT_TYPE, ORIGIN, PRAGMA,
-    REFERER, REFERRER_POLICY, USER_AGENT,
+    HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, CACHE_CONTROL, CONTENT_TYPE, PRAGMA, REFERRER_POLICY, USER_AGENT,
 };
 
 pub fn now() -> String {
@@ -31,14 +30,6 @@ pub fn init_headers(h: &mut HeaderMap) -> &mut HeaderMap {
     h.insert(CACHE_CONTROL, HeaderValue::from_static("no-cache"));
     h.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
     h.insert(PRAGMA, HeaderValue::from_static("no-cache"));
-    h.insert(
-        REFERER,
-        HeaderValue::from_static("https://test2.blockjoker.org/home"),
-    );
-    h.insert(
-        ORIGIN,
-        HeaderValue::from_static("https://test2.blockjoker.org"),
-    );
     h.insert("priority", HeaderValue::from_static("u=1, i"));
     h.insert("sec-ch-ua", HeaderValue::from_static("\"\""));
     h.insert("sec-ch-ua-mobile", HeaderValue::from_static("?1"));

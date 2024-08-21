@@ -4,9 +4,9 @@ use clap::Parser;
 pub struct MineArgs {
     #[arg(
         long,
-        value_name = "cores",
-        help = "Cpu cores you use",
+        value_name = "threads",
+        help = "How many threads you use",
         default_value = "2"
     )]
-    pub cores: u8,
+    pub threads: u8,
 }

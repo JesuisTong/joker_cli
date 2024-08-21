@@ -2,7 +2,7 @@
 🤡joker_cli
 </h1>
 
-As [Block Joker](https://test2.blockjoker.org/home) said, no real use bot maybe.
+As [Block Joker](https://blockjoker.org/home) said, no real use bot maybe.
 
 ## Caution
 
@@ -10,8 +10,9 @@ This is for learning and praticing, use it may cause you be banned.
 
 ## Features
 
-- [✔] Support both v1 and v2.
+- [✔] Support mainnet.
 - [✔] Multi cores calculate hash enable.
+- ~~[✔] Support both v1 and v2.~~
 
 ## Usage
 
@@ -40,14 +41,16 @@ Start mining
 Usage: joker_cli.exe mine [OPTIONS]
 
 Options:
-  --cores <cores>                    Cpu core you use [default: 2]
+  --threads <cores>                    How many threads you use [default: 2]
 ```
 
-1. Get your cookie token in the [Block Joker](https://test2.blockjoker.org/home)
+1. Get your cookie token in the [Block Joker](https://blockjoker.org/home)
 
-2. Get your auth token in the [Block Joker](https://test2.blockjoker.org/home) localstorage.
+2. Get your auth token in the [Block Joker](https://blockjoker.org/home) localstorage.
 
-3. Maybe you need also a session cookie which is genereted by `start mining` action. (Someone may not, but also work)
+3. Get your `cf_response` when mining.
+
+~~3. Maybe you need also a session cookie which is genereted by `start mining` action. (Someone may not, but also work)~~
 
 ## Buy me a coffee
 

@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 use colog;
+use joker::BaseJoker;
 
 mod args;
 mod joker;
@@ -26,14 +27,14 @@ struct Args {
     )]
     session_cookie: Option<String>,
 
-    #[arg(long, short = 'A', help = "authorization.", global = true)]
+    #[arg(long, short = 'A', help = "authorization", global = true)]
     authorization: Option<String>,
+
+    #[arg(long, help = "cf_response", global = true)]
+    cf_response: Option<String>,
 
     #[arg(long, short = 'P', help = "proxy", global = true)]
     proxy: Option<String>,
-
-    #[arg(long, help = "joker version", global = true, default_value = "2")]
-    version: u8,
 
     #[command(subcommand)]
     command: Commands,
@@ -51,25 +52,17 @@ enum Commands {
     Records,
 }
 
-fn create_joker_instance(args: &Args) -> joker::JokerEnum {
-    match args.version {
-        2u8 => joker::JokerEnum::Joker2(joker::Joker2::new(
-            "Joker".to_string(),
-            args.cookie.clone().unwrap(),
-            args.session_cookie.clone().unwrap(),
-            args.authorization.clone().unwrap(),
-            args.proxy.clone(),
-            2,
-        )),
-        _ => joker::JokerEnum::Joker1(joker::Joker1::new(
-            "Joker".to_string(),
-            args.cookie.clone().unwrap(),
-            args.session_cookie.clone().unwrap(),
-            args.authorization.clone().unwrap(),
-            args.proxy.clone(),
-            2,
-        )),
-    }
+fn create_joker_instance(args: &Args) -> joker::Joker {
+    joker::Joker::new(
+        "Joker".to_string(),
+        args.cookie.clone().unwrap(),
+        args.session_cookie.clone().unwrap(),
+        format!("Bearer {}", args.authorization.clone().unwrap()),
+        args.cf_response.clone().unwrap(),
+        None,
+        args.proxy.clone(),
+        2,
+    )
 }
 
 #[tokio::main]
@@ -81,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.command {
         Commands::Mine(mine_args) => {
-            joker_ins.set_cores(mine_args.cores);
+            joker_ins.set_threads(mine_args.threads);
             joker_ins.do_loop().await?;
         }
         Commands::Info => {
