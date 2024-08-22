@@ -34,7 +34,7 @@ pub struct Joker {
     cookie: String,
     session_cookie: String,
     authorization: String,
-    cf_response: String,
+    cf_response: Option<String>,
     pow_id: Option<String>,
     proxy: Option<String>,
     threads: u8,
@@ -46,7 +46,7 @@ impl Joker {
         cookie: String,
         session_cookie: String,
         authorization: String,
-        cf_response: String,
+        cf_response: Option<String>,
         pow_id: Option<String>,
         proxy: Option<String>,
         core: u8,
@@ -125,16 +125,17 @@ impl BaseJoker for Joker {
 
     async fn get_mission(&mut self) -> Result<(String, String), Box<dyn std::error::Error>> {
         let (client, headers) = self.request();
-
+        let body = match &self.cf_response {
+            Some(v) => json!({
+                "cf_response": v
+            }),
+            None => json!({}),
+        };
+        
         loop {
             let response = client
                 .post("https://blockjoker.org/api/v2/missions")
-                .body(
-                    json!({
-                    "cf_response": self.cf_response
-                    })
-                    .to_string(),
-                )
+                .body(body.to_string())
                 .headers(headers.clone())
                 .send()
                 .await;

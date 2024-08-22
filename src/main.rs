@@ -16,7 +16,7 @@ struct Args {
         help = "your website cookie",
         global = true
     )]
-    cookie: Option<String>,
+    cookie: String,
 
     #[clap(
         short = 'S',
@@ -28,7 +28,7 @@ struct Args {
     session_cookie: Option<String>,
 
     #[arg(long, short = 'A', help = "authorization", global = true)]
-    authorization: Option<String>,
+    authorization: String,
 
     #[arg(long, help = "cf_response", global = true)]
     cf_response: Option<String>,
@@ -55,10 +55,10 @@ enum Commands {
 fn create_joker_instance(args: &Args) -> joker::Joker {
     joker::Joker::new(
         "Joker".to_string(),
-        args.cookie.clone().unwrap(),
+        args.cookie.clone(),
         args.session_cookie.clone().unwrap(),
-        format!("Bearer {}", args.authorization.clone().unwrap()),
-        args.cf_response.clone().unwrap(),
+        format!("Bearer {}", args.authorization.clone()),
+        args.cf_response.clone(),
         None,
         args.proxy.clone(),
         2,
