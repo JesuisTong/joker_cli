@@ -48,7 +48,7 @@ Options:
 
 2. Get your auth token in the [Block Joker](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=) localstorage.
 
-3. Get your `cf_response` when mining.
+3. Get your `cf_response` when mining. (May not required since last update)
 
 ~~3. Maybe you need also a session cookie which is genereted by `start mining` action. (Someone may not, but also work)~~
 
