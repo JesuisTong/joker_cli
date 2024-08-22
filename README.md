@@ -44,9 +44,9 @@ Options:
   --threads <cores>                    How many threads you use [default: 2]
 ```
 
-1. Get your cookie token in the [Block Joker]([https://blockjoker.org/home](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=))
+1. Get your cookie token in the [Block Joker](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=)
 
-2. Get your auth token in the [Block Joker]([https://blockjoker.org/home](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=)) localstorage.
+2. Get your auth token in the [Block Joker](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=) localstorage.
 
 3. Get your `cf_response` when mining.
 
