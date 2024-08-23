@@ -4,9 +4,13 @@
 
 As [https://blockjoker.org/home](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=) said, no real use bot maybe.
 
-## Caution
+## **Highly recommend use browser to mine.**
 
-This is for learning and praticing, use it may cause you **be banned**.
+## ⚠Caution⚠
+
+- This is for learning and praticing, use it may cause you **be banned**.
+- There are a lot of `cloudflare challenge`, and i don't know why and when `cloudflare cookie` changed. Once it changed, the claim function will get `403` and never claim. You should login [https://blockjoker.org/home](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=) and `mine` manually to get a new `cloudflare cookie`, so it may not help you to `mine` for **a long time**.
+- Maybe use the same browser version(for me Microsoft Edge Version 127.0.2651.105), else you should modify `Headers` manually.
 
 ## Features
 
@@ -43,10 +47,10 @@ Usage: joker_cli.exe mine [OPTIONS]
 Options:
   --threads <cores>                    How many threads you use [default: 2]
 ```
+TODO: 保证用户知道如何获取自己的token
+1. Get your `cookie` in the [Block Joker](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=)
 
-1. Get your cookie token in the [Block Joker](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=)
-
-2. Get your auth token in the [Block Joker](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=) localstorage.
+2. Get your `auth token` in the [Block Joker](https://blockjoker.org/login?invite_code=zDZ7AHFKYF_VYTBXjc03zZGN30mATogOl5qrzpr43ug=) localstorage.
 
 3. Get your `cf_response` when mining. (May not required since last update)
 

@@ -1,7 +1,10 @@
 use std::sync::{Arc, RwLock};
 
 use reqwest::{
-    header::{HeaderMap, HeaderValue, AUTHORIZATION, COOKIE, ORIGIN, REFERER, SET_COOKIE},
+    header::{
+        HeaderMap, HeaderValue, ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, AUTHORIZATION,
+        CONTENT_TYPE, COOKIE, ORIGIN, REFERER, SET_COOKIE, USER_AGENT,
+    },
     StatusCode,
 };
 use serde_json::json;
@@ -71,29 +74,78 @@ impl Joker {
 impl BaseJoker for Joker {
     fn request(&self) -> (reqwest::Client, HeaderMap) {
         let client = if let Some(p) = &self.proxy {
-            reqwest::Client::builder()
-                .proxy(reqwest::Proxy::all(p).unwrap())
-                .build()
-                .unwrap()
+            reqwest::Client::builder().proxy(reqwest::Proxy::all(p).unwrap())
         } else {
-            reqwest::Client::new()
+            reqwest::Client::builder()
         };
-        let mut headers = HeaderMap::new();
-        utils::init_headers(&mut headers);
+        let client = client
+            .gzip(true)
+            .brotli(true)
+            .deflate(true)
+            .zstd(true)
+            .build()
+            .unwrap();
 
+        let mut headers = HeaderMap::new();
+
+        // order as normal browser
         headers.insert(
-            COOKIE,
-            HeaderValue::from_str(&format!("{} {}", &self.cookie, &self.session_cookie)).unwrap(),
+            "sec-ch-ua",
+            HeaderValue::from_static(
+                "\"Not)A;Brand\";v=\"99\", \"Microsoft Edge\";v=\"127\", \"Chromium\";v=\"127\"",
+            ),
         );
+        headers.insert("sec-ch-ua-mobile", HeaderValue::from_static("?0"));
         headers.insert(
             AUTHORIZATION,
             HeaderValue::from_str(&self.authorization).unwrap(),
         );
+        headers.insert("sec-ch-ua-arch", HeaderValue::from_static("\"x86\""));
+        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+
+        headers.insert(
+            "sec-ch-ua-full-version",
+            HeaderValue::from_static("\"127.0.2651.105\""),
+        );
+        headers.insert(
+            ACCEPT,
+            HeaderValue::from_static("application/json, text/plain, */*"),
+        );
+        headers.insert(
+            "sec-ch-ua-platform-version",
+            HeaderValue::from_static("\"10.0.0\""),
+        );
+        headers.insert(USER_AGENT, HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Edg/127.0.0.0"));
+        headers.insert("sec-ch-ua-full-version-list", HeaderValue::from_static("\"Not)A;Brand\";v=\"99.0.0.0\", \"Microsoft Edge\";v=\"127.0.2651.105\", \"Chromium\";v=\"127.0.6533.120\""));
+        headers.insert("sec-ch-ua-bitness", HeaderValue::from_static("\"64\""));
+        headers.insert("sec-ch-ua-model", HeaderValue::from_static("\"\""));
+        headers.insert(
+            "sec-ch-ua-platform",
+            HeaderValue::from_static("\"Windows\""),
+        );
+        headers.insert(ORIGIN, HeaderValue::from_static("https://blockjoker.org"));
+        headers.insert("sec-fetch-site", HeaderValue::from_static("same-origin"));
+        headers.insert("sec-fetch-mode", HeaderValue::from_static("cors"));
+        headers.insert("sec-fetch-dest", HeaderValue::from_static("empty"));
         headers.insert(
             REFERER,
             HeaderValue::from_static("https://blockjoker.org/home"),
         );
-        headers.insert(ORIGIN, HeaderValue::from_static("https://blockjoker.org"));
+        headers.insert(
+            ACCEPT_ENCODING,
+            HeaderValue::from_static("gzip, deflate, br, zstd"),
+        );
+        headers.insert(
+            ACCEPT_LANGUAGE,
+            HeaderValue::from_static("zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"),
+        );
+        headers.insert(
+            COOKIE,
+            HeaderValue::from_str(&format!("{} {}", &self.cookie, &self.session_cookie)).unwrap(),
+        );
+        headers.insert("priority", HeaderValue::from_static("u=1, i"));
+
+        // headers.insert(ORIGIN, HeaderValue::from_static("https://blockjoker.org"));
 
         (client, headers)
     }
@@ -131,10 +183,11 @@ impl BaseJoker for Joker {
             }),
             None => json!({}),
         };
-        
+
         loop {
             let response = client
                 .post("https://blockjoker.org/api/v2/missions")
+                .version(reqwest::Version::HTTP_2)
                 .body(body.to_string())
                 .headers(headers.clone())
                 .send()
@@ -198,6 +251,7 @@ impl BaseJoker for Joker {
             if let Some(p) = &self.pow_id {
                 let response = client
                     .post("https://blockjoker.org/api/v2/missions/nonce")
+                    .version(reqwest::Version::HTTP_2)
                     .headers(headers.clone())
                     .body(
                         json!({
@@ -328,6 +382,7 @@ impl BaseJoker for Joker {
         let (client, headers) = self.request();
         let response = client
             .get("https://blockjoker.org/api/v2/missions/pow-records")
+            .version(reqwest::Version::HTTP_2)
             .headers(headers)
             .send()
             .await?;
@@ -355,6 +410,7 @@ impl BaseJoker for Joker {
         let (client, headers) = self.request();
         let response = client
             .get("https://blockjoker.org/api/v2/accounts")
+            .version(reqwest::Version::HTTP_2)
             .headers(headers)
             .send()
             .await?;

@@ -14,7 +14,7 @@ struct Args {
         short = 'c',
         value_name = "COOKIE",
         help = "your website cookie",
-        global = true
+        global = false
     )]
     cookie: String,
 
@@ -23,17 +23,17 @@ struct Args {
         long = "session_cookie",
         help = "session_cookie",
         default_value = "",
-        global = true
+        global = false
     )]
     session_cookie: Option<String>,
 
-    #[arg(long, short = 'A', help = "authorization", global = true)]
+    #[arg(long, short = 'A', help = "authorization", global = false)]
     authorization: String,
 
-    #[arg(long, help = "cf_response", global = true)]
+    #[arg(long, help = "cf_response", global = false)]
     cf_response: Option<String>,
 
-    #[arg(long, short = 'P', help = "proxy", global = true)]
+    #[arg(long, short = 'P', help = "proxy", global = false)]
     proxy: Option<String>,
 
     #[command(subcommand)]
